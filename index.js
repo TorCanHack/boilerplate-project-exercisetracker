@@ -20,22 +20,19 @@ userSchema = new Schema ({
 let User = mongoose.model("User", userSchema);
 
 exerciseSchema = new Schema ({
-  user: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-
+ 
   username: { type: String, required: true},
   description:  { type: String, required: true},
   duration:  { type: String, required: true},
   date:  { type: String, required: true},
-  _id: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'User'}
-
-
+ 
 })
 
-const Exercise = mongoose.model = ('Exercise', exerciseSchema);
+const Exercise = mongoose.model('Exercise', exerciseSchema);
+
+mongoose.connection.on('connected', () => {
+  console.log('Connected to MongoDB');
+});
 
 app.get('/', (req, res) => {
   res.sendFile(__dirname + '/views/index.html')
@@ -58,7 +55,7 @@ app.post("/api/users", async (req, res) => {
 
 app.post("/api/users/:_id/exercises", async (req, res) => {
   try {
-    const user = await User.findById(req.params.id);
+    const user = await User.findById(req.params._id);
     if(!user) {
       return res.status(404).json({error: "User not found"})
     }
@@ -67,7 +64,7 @@ app.post("/api/users/:_id/exercises", async (req, res) => {
       username: user.username,
       description: req.body.description,
       duration: Number(req.body.duration),
-      date: req.body.date ? new Date(req.body.date).toDateString() : new Date().toDateString(),
+      date: req.body.date ? new Date(req.body.date).toDateString() : new Date().toDateString()
       
 
     })
@@ -75,11 +72,16 @@ app.post("/api/users/:_id/exercises", async (req, res) => {
     const savedExercise = await exercise.save();
 
     res.json({
-      username: savedExercise.username,
-      description: savedExercise.description,
-      duration: savedExercise.duration,
-      date: savedExercise.date,
-      _id: user._id
+      username: user.username,
+      _id: user._id,
+      ...{
+        description: savedExercise.description,
+        duration: savedExercise.duration,
+        date: savedExercise.date
+
+      }
+      
+      
     })
   } catch (error) {
     res.status(400).json({error: error.message})
@@ -131,7 +133,7 @@ app.get("/api/users/:_id/logs", async (req, res) => {
 
 app.get("/api/users", async (req, res) => {
   try {
-    const users = await User.find({}).seleect("username _id");
+    const users = await User.find({}).select("username _id");
     res.json(users);
 
   } catch(error) {
